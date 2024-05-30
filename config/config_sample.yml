@@ -1,0 +1,46 @@
+# input paths
+head_path: "X:/hairstep/head_model_metahuman.obj"
+camera_path: X:/hairstep/HiSa_HiDa\param\00e7ef0e1bac0975258d593820b2c4d7.npy
+hair_path: X:/hairstep/HiSa_HiDa\hair3D/resample_32\00e7ef0e1bac0975258d593820b2c4d7.hair
+ref_img_path: X:/hairstep/HiSa_HiDa\resized_img\00e7ef0e1bac0975258d593820b2c4d7.png
+ref_seg_path: X:/hairstep/HiSa_HiDa\seg\00e7ef0e1bac0975258d593820b2c4d7.png
+ref_orien_path: X:/hairstep/HiSa_HiDa\strand_map\00e7ef0e1bac0975258d593820b2c4d7.png
+ref_depth_path: X:/hairstep/HiSa_HiDa\depth_map\00e7ef0e1bac0975258d593820b2c4d7.npy
+hida_label_path: X:/hairstep/HiSa_HiDa\relative_depth/labels\00e7ef0e1bac0975258d593820b2c4d7.npy
+hida_pair_path: X:/hairstep/HiSa_HiDa\relative_depth/pairs\00e7ef0e1bac0975258d593820b2c4d7.npy
+ckpt_path: "../contrastive_learning/runs/Mar18_11-27-14_ROG_single_parameter/model_best.pth.tar"
+
+# output path
+output_dir: "X:/differential_rendering/geometry/test"
+
+# curve parameters
+n_sample: 32
+n_guide: 512
+n_cluster: 1024
+
+# optimization parameters
+epoch: 500
+lr_guide: 0.0001
+lr_clump: 0.01
+with_modifier: True
+loss_outline_weights: [1, 1, 0.1, 10000, 1, 1]    # loss_silh, loss_orien, loss_depth, loss_geom, loss_smooth, loss_root
+
+# rasterize paramerters
+rasterize_soft:
+  blur_radius: 4  # in pixels
+  lines_per_pixel: 128
+  bin_size: null
+  sigma: 0.00001
+  gamma: 0.0001
+rasterize_medium:
+  blur_radius: 2  # in pixels
+  lines_per_pixel: 128
+  bin_size: null
+  sigma: 0.00001
+  gamma: 0.00001
+rasterize_hard:
+  blur_radius: 1
+  lines_per_pixel: 1
+  bin_size: null
+  sigma: 1
+  gamma: 0.1

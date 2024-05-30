@@ -1,0 +1,6 @@
+
+imageio
+matplotlib
+opencv-python==4.5.5.62
+argparse
+git+https://github.com/facebookresearch/segment-anything.git
