@@ -3,12 +3,10 @@ import sys
 import torch
 import matplotlib.pyplot as plt
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(cur_dir, "../"))
-from guide_interpolation import HairModel
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from src.hair_model import HairModel
+from src.utils import render_hair_shading, render_hair_color, save_hair_strands
 
-sys.path.insert(0, os.path.join(cur_dir, "../../contrastive_learning"))
-from data_render import visualize_hair_color, visualize_hair
 
 head_path = "X:/hairstep/head_smooth.obj"
 # hair_path = "X:/hairstep/HiSa_HiDa/hair3D/resample_32/14babc004f6dc3f4a9b1150ca1399c01.hair"
@@ -21,14 +19,17 @@ out_path = "X:/results/resample/cc5bf02bc6205f878cde02df9d00e7b9/gem_loss.png"
 # out_path = "X:/results/resample/strands00187/mean_loss.png"
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
+hair_result_path = out_path.replace(".png", ".hair")
+camera_path = hair_path.replace(".hair", "_camera.json")
+
 hair_model = HairModel(hair_path, n_guide=256, device="cuda")
 hair_interp = hair_model.eval()
+save_hair_strands(hair_result_path, hair_interp)
+
 dists = torch.abs(hair_interp - hair_model.hair_strands).norm(dim=-1).cpu().numpy()
 color = plt.cm.jet(dists / 1e-2)
 
-visualize_hair_color(head_path, hair_path, hair_interp, color, out_path.replace(".png", "_vis.png"),
-            img_size=1024, side_view=False,
-            device_idx=torch.cuda.current_device()-torch.cuda.device_count())
-visualize_hair(head_path, hair_path, hair_interp, out_path,
-            img_size=1024, side_view=False, render_origin=False,
-            device_idx=torch.cuda.current_device()-torch.cuda.device_count())
+render_hair_color(head_path, hair_result_path, color, out_path.replace(".png", "_vis.png"), camera_path,
+            img_size=1024, side_view=False, device_idx=0)
+render_hair_shading(head_path, hair_result_path, out_path, camera_path,
+            img_size=1024, side_view=False, device_idx=0)

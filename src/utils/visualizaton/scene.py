@@ -33,6 +33,7 @@ def single_select(obj: bpy.types.Object = None, name: str = None, active=True):
 
 
 def get_objects_bound_box(objects: list[bpy.types.Object]):
+    bpy.context.evaluated_depsgraph_get().update()
     boxes = []
     for obj in objects:
         box = np.array([[bb[:] for bb in obj.bound_box]]).reshape(-1, 3)
@@ -74,6 +75,7 @@ def rotate_camera_around(objects: list[bpy.types.Object], angle: float, axis: st
     Args:
         objects (list[bpy.types.Object]): A list of Blender objects to rotate the camera around.
         angle (float): The angle (in radians) by which to rotate the camera.
+        axis (str): The axis around which to rotate the camera. Can be "X", "Y", or "Z".
 
     Returns:
         None
@@ -104,11 +106,14 @@ def create_hair_from_strands(name, strands, widths=None) -> bpy.types.Object:
     curve.dimensions = "3D"
     for i in range(len(strands)):
         pos = np.hstack((strands[i], np.ones((len(strands[i]), 1)))).astype(np.float32)
-        wid = (
-            np.ones(len(strands[i]), dtype=np.float32) * 4e-5 * np.random.uniform(0.7, 1.0)
-            if widths is None
-            else np.array(widths[i], dtype=np.float32) / 2
-        )
+        
+        if widths is None:
+            wid = np.ones(len(strands[i]), dtype=np.float32) * 4e-5 * np.random.uniform(0.7, 1.0)
+        elif isinstance(widths, float):
+            wid = np.ones(len(strands[i]), dtype=np.float32) * widths
+        else:
+            wid = np.array(widths[i], dtype=np.float32) / 2
+            
         s = curve.splines.new("POLY")
         s.points.add(len(pos) - 1)  # s already had one point
         s.points.foreach_set("co", pos.flatten())
@@ -214,7 +219,7 @@ def import_opengl_camera(filepath: str):
     
 
 def export_opengl_camera(filepath: str, cam_obj: bpy.types.Object):
-    def _get_render_fov(cam_obj: bpy.types.Object) -> tuple:
+    def get_render_fov(cam_obj: bpy.types.Object) -> tuple:
         cam = cam_obj.data
 
         fov = cam.angle
@@ -249,7 +254,7 @@ def export_opengl_camera(filepath: str, cam_obj: bpy.types.Object):
         "type": "opengl",
         "unit": "m",
         "resolution": (render.resolution_x, render.resolution_y),
-        "fov": np.rad2deg(_get_render_fov(cam_obj)[0]),
+        "fov": np.rad2deg(get_render_fov(cam_obj)[0]),
         "position": tuple(vec3_bl2gl(pos)),
         "look_at": tuple(vec3_bl2gl(pos + rot @ Vector((0, 1, 0)))),
         "up": tuple(vec3_bl2gl(rot @ Vector((0, 0, 1)))),
@@ -421,7 +426,7 @@ def render_scene(out_path, img_size=512, engine="CYCLES"):
     render.engine = engine
     render.resolution_x = img_size
     render.resolution_y = img_size
-    render.filepath = out_path
+    render.filepath = os.path.realpath(out_path)
 
     bpy.ops.render.render(write_still=True)
 
@@ -431,17 +436,18 @@ def render_hair_shading(
     hair_path: str,
     out_path: str,
     camera_path: str = None,
-    img_size: int = 512,
+    img_size: int = 1024,
     melanin: float = 0.4,
-    device_idx: int = 0,
     side_view: bool = False,
+    device_idx: int = 0,
     render_engine: str = "CYCLES",
     save_proj: bool = False,
+    animation: bool = False,
 ):
     torch.cuda.empty_cache()
 
     init_scene(device_idx)
-    build_scene(model_path, hair_path, get_hair_bsdf_material())
+    build_scene(model_path, hair_path, get_hair_bsdf_material(melanin, 0.3))
     
     if camera_path is None:
         camera_path = hair_path.replace(".hair", "_camera.json")
@@ -454,14 +460,25 @@ def render_hair_shading(
     
     hair_name = os.path.splitext(os.path.basename(hair_path))[0]
     hair_obj = bpy.data.objects[hair_name]
-    set_hair_material(hair_name, melanin, roughness=0.3)
     
     filename, ext = os.path.splitext(os.path.realpath(out_path))
-    
-    render_scene(filename + "_front" + ext, img_size, render_engine)
-    if side_view:
-        rotate_camera_around([hair_obj], -np.pi/8)
-        render_scene(filename + "_side" + ext, img_size, render_engine)
+
+    # render
+    if not animation:
+        render_scene(filename + "_front" + ext, img_size, render_engine)
+        if side_view:
+            rotate_camera_around([hair_obj], -np.pi/8)
+            render_scene(filename + "_side" + ext, img_size, render_engine)
+    else:
+        # calculate rotation steps
+        angles1 = (np.cos(np.linspace(0, np.pi, 50, endpoint=False)) * 0.5 - 0.5) * np.pi/4
+        angles2 = np.cos(np.linspace(np.pi, 0, 70, endpoint=False)) * np.pi/4
+        angles3 = -(np.cos(np.linspace(np.pi, 0, 51, endpoint=True)) * 0.5 - 0.5) * np.pi/4
+        angles = np.concatenate([[0], angles1, angles2, angles3])
+        
+        for idx, angle in enumerate(np.diff(angles)):
+            rotate_camera_around([hair_obj], angle)
+            render_scene(filename + f"_{idx:03d}" + ext, img_size)
     
     if save_proj:
         bpy.ops.wm.save_as_mainfile(filepath=filename+".blend")
@@ -581,8 +598,7 @@ def render_hair_projection(
     
     # hair
     hair_obj = import_hair_obj(hair_path, coord_transform=False)
-    hair_obj.data.materials.append(get_hair_bsdf_material())
-    set_hair_material(hair_obj.name, melanin)
+    hair_obj.data.materials.append(get_hair_bsdf_material(melanin))
 
     # world
     add_envmap(os.path.join(asset_dir, "ENV.Environment.exr"))
@@ -621,6 +637,8 @@ def render_hair_template(
     camera_path: str = None,
     transform: np.ndarray = None,
     img_size: float = 1024,
+    side_view: bool = True,
+    animation: bool = False,
     device_idx: int = 0,
 ):
     template_path = os.path.join(asset_dir, "render_template.blend")
@@ -632,6 +650,10 @@ def render_hair_template(
     if transform is not None:
         hair_obj.matrix_world = Matrix(transform)
     hair_obj.data.materials.append(bpy.data.materials["Hair"])
+    
+    # camera
+    algin_camera_to_objects([hair_obj])
+    rotate_camera_around([hair_obj], -np.pi/32, axis="X")
 
     if camera_path is None:
         camera_path = hair_path.replace(".hair", "_camera.json")
@@ -642,15 +664,25 @@ def render_hair_template(
     else:
         import_opengl_camera(camera_path)
 
-    algin_camera_to_objects([hair_obj])
-    rotate_camera_around([hair_obj], -np.pi/32, axis="X")
-    
     filename, ext = os.path.splitext(os.path.realpath(output_path))
 
-    render_scene(filename + "_front" + ext, img_size)
-    rotate_camera_around([hair_obj], np.pi/8)
-    render_scene(filename + "_side_L" + ext, img_size)
-    rotate_camera_around([hair_obj], -np.pi/4)
-    render_scene(filename + "_side_R" + ext, img_size)
+    # render
+    if not animation:
+        render_scene(filename + "_front" + ext, img_size)
+        if side_view:
+            rotate_camera_around([hair_obj], np.pi/8)
+            render_scene(filename + "_side_L" + ext, img_size)
+            rotate_camera_around([hair_obj], -np.pi/4)
+            render_scene(filename + "_side_R" + ext, img_size)
+    else:
+        # calculate rotation steps
+        angles1 = (np.cos(np.linspace(0, np.pi, 50, endpoint=False)) * 0.5 - 0.5) * np.pi/4
+        angles2 = np.cos(np.linspace(np.pi, 0, 70, endpoint=False)) * np.pi/4
+        angles3 = -(np.cos(np.linspace(np.pi, 0, 51, endpoint=True)) * 0.5 - 0.5) * np.pi/4
+        angles = np.concatenate([[0], angles1, angles2, angles3])
+        
+        for idx, angle in enumerate(np.diff(angles)):
+            rotate_camera_around([hair_obj], angle)
+            render_scene(filename + f"_{idx:03d}" + ext, img_size)
     
     bpy.ops.wm.quit_blender()

@@ -2,7 +2,7 @@ import bpy
 import numpy as np
 
 
-def get_bsdf_material():
+def get_bsdf_material(color = (0.4, 0.4, 0.4, 1.0)):
     material = bpy.data.materials.new("Material")
     material.use_nodes = True
     nodes = material.node_tree.nodes
@@ -11,7 +11,7 @@ def get_bsdf_material():
     
     # ceate nodes
     principled_node = nodes.new(type="ShaderNodeBsdfPrincipled")
-    principled_node.inputs['Base Color'].default_value = (0.4, 0.4, 0.4, 1.0)
+    principled_node.inputs['Base Color'].default_value = color
     principled_node.inputs['Specular'].default_value = 0
     material_output_node = nodes.new(type="ShaderNodeOutputMaterial")
 
@@ -21,7 +21,7 @@ def get_bsdf_material():
     return material
 
 
-def get_hair_bsdf_material():
+def get_hair_bsdf_material(melanin=0.99, roughness=0.15, radial_roughness=0.3):
     material = bpy.data.materials.new("Hair")
     material.use_nodes = True
 
@@ -35,10 +35,10 @@ def get_hair_bsdf_material():
     # ceate nodes
     principled_node = nodes.new(type="ShaderNodeBsdfHairPrincipled")
     principled_node.parametrization = "MELANIN"
-    principled_node.inputs['Melanin'].default_value = 0.99
+    principled_node.inputs['Melanin'].default_value = melanin
     principled_node.inputs['Melanin Redness'].default_value = 0
-    principled_node.inputs['Roughness'].default_value = 0.15
-    principled_node.inputs['Radial Roughness'].default_value = 0.3
+    principled_node.inputs['Roughness'].default_value = roughness
+    principled_node.inputs['Radial Roughness'].default_value = radial_roughness
     principled_node.inputs['Offset'].default_value = np.radians(-2)
     if bpy.app.version >= (4, 0, 0):
         principled_node.model = "HUANG"
@@ -57,6 +57,7 @@ def get_hair_bsdf_material():
     
     return material
 
+
 def get_hair_aov_material():
     mat = bpy.data.materials.new("Hair_vis")
     mat.use_nodes = True
@@ -70,7 +71,7 @@ def get_hair_aov_material():
     return mat
 
 
-def get_hair_dataset_material():
+def get_hair_dataset_material(melanin=0.99, roughness=0.15, radial_roughness=0.3):
     material = bpy.data.materials.new("Hair")
     material.use_nodes = True
 
@@ -84,10 +85,10 @@ def get_hair_dataset_material():
     # ceate nodes
     principled_node = nodes.new(type="ShaderNodeBsdfHairPrincipled")
     principled_node.parametrization = "MELANIN"
-    principled_node.inputs['Melanin'].default_value = 0.99
+    principled_node.inputs['Melanin'].default_value = melanin
     principled_node.inputs['Melanin Redness'].default_value = 0
-    principled_node.inputs['Roughness'].default_value = 0.15
-    principled_node.inputs['Radial Roughness'].default_value = 0.3
+    principled_node.inputs['Roughness'].default_value = roughness
+    principled_node.inputs['Radial Roughness'].default_value = radial_roughness
     principled_node.inputs['Offset'].default_value = np.radians(-2)
     if bpy.app.version >= (4, 0, 0):
         principled_node.model = "HUANG"

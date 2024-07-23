@@ -35,6 +35,11 @@ from .opengl_render import (
     GlHairRenderer,
 )
 
+from .quad_rasterizer import (
+    QuadRasterizer,
+    build_quads,
+)
+
 from .utils import (
     stdout_redirected,
     load_ref_imgs_hairstep,

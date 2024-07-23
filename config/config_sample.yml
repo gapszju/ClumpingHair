@@ -18,12 +18,18 @@ n_sample: 32
 n_guide: 512
 n_cluster: 1024
 
+# modifier parameter
+clump_scale: null
+noise: True
+cut: True
+
 # optimization parameters
 epoch: 500
 lr_guide: 0.0001
 lr_clump: 0.01
 with_modifier: True
-loss_outline_weights: [1, 1, 0.1, 10000, 1, 1]    # loss_silh, loss_orien, loss_depth, loss_geom, loss_smooth, loss_root
+loss_outline_weights: [1, 1, 0.1, 10000, 10, 1]    # silh, orien, depth, geom, smooth, root
+vis_interval: 20
 
 # rasterize paramerters
 rasterize_soft:

@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 import yaml
+import glob
 import argparse
 import pyexr
 import numpy as np
@@ -12,12 +13,12 @@ from pytorch3d.structures import Curves
 from pytorch3d.io import load_hair, save_hair
 
 device = torch.device("cuda")
-cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.join(cur_dir, "../"))
-from modifiers.hair_modifiers import HairModifier
-from utils import *
-from optim import *
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(ROOT_DIR)
+from src.model.network import sNet
+from src.optim import get_references, get_model, search_best_param
+from src.utils import *
 
 
 def pred_param(target, random):
@@ -64,7 +65,7 @@ def valid_clumping_param(config):
 
     # reference
     ref_img, _, _, _ = get_references(config)
-    ref_feature = F.normalize(model(ref_img[None], None), dim=-1)[0]
+    ref_feature = normalize(model(ref_img[None], None), dim=-1)[0]
     C, H, W = ref_img.shape
 
     # load scene
@@ -159,28 +160,22 @@ if __name__ == "__main__":
         regression_param(config)
         valid_clumping_param(config)
         
-        origin_hair_strands = torch.stack(load_hair(config["hair_path"])).numpy()
-        optim_hair_strands = torch.stack(load_hair(os.path.join(config["output_dir"], "optim_result.hair"))).numpy()
-        regression_hair_strands = torch.stack(load_hair(os.path.join(config["output_dir"], "regression_result.hair"))).numpy()
-        visualize_hair(config["head_path"], config["ref_hair_path"], None,
-            os.path.join(config["output_dir"], f"reference.png"),
-            device_idx=torch.cuda.current_device()-torch.cuda.device_count(),
-            img_size=1024, render_origin=True, side_view=True)
+        render_hair_shading(config["head_path"], config["ref_hair_path"], os.path.join(config["output_dir"], f"reference.png"),
+                            img_size=1024, side_view=True, device_idx=args.gpu)
         
-        visualize_hair(config["head_path"], config["ref_hair_path"], origin_hair_strands,
-            os.path.join(config["output_dir"], f"optim_result.png"),
-            device_idx=torch.cuda.current_device()-torch.cuda.device_count(),
-            img_size=1024, render_origin=False, side_view=True)
+        render_hair_shading(config["head_path"], config["hair_path"], os.path.join(config["output_dir"], f"wo_modifiers.png"),
+                            camera_path=config["ref_hair_path"].replace(".hair", "_camera.json"),
+                            img_size=1024, side_view=True, device_idx=args.gpu)
         
-        visualize_hair(config["head_path"], config["ref_hair_path"], optim_hair_strands,
-            os.path.join(config["output_dir"], f"optim_result.png"),
-            device_idx=torch.cuda.current_device()-torch.cuda.device_count(),
-            img_size=1024, render_origin=False, side_view=True)
+        render_hair_shading(config["head_path"], os.path.join(config["output_dir"], "optim_result.hair"),
+                            os.path.join(config["output_dir"], f"optim_result.png"),
+                            camera_path=config["ref_hair_path"].replace(".hair", "_camera.json"),
+                            img_size=1024, side_view=True, device_idx=args.gpu)
         
-        visualize_hair(config["head_path"], config["ref_hair_path"], regression_hair_strands,
-            os.path.join(config["output_dir"], f"regression_result.png"),
-            device_idx=torch.cuda.current_device()-torch.cuda.device_count(),
-            img_size=1024, render_origin=False, side_view=True)
+        render_hair_shading(config["head_path"], os.path.join(config["output_dir"], "regression_result.hair"),
+                            os.path.join(config["output_dir"], f"regression_result.png"),
+                            camera_path=config["ref_hair_path"].replace(".hair", "_camera.json"),
+                            img_size=1024, side_view=True, device_idx=args.gpu)
 
     # input_dir = "X:/hairstep/Real_Image"
     # output_dir = "X:/results/guide_clumping_ablation"

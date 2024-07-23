@@ -3,7 +3,7 @@ import bpy
 import pyexr
 import matplotlib.pyplot as plt
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from src.utils.visualizaton import *
 
 
@@ -80,11 +80,12 @@ def run(hair_path, model_path, output_dir, resolution, device_idx):
 
 
 if __name__ == "__main__":
+    import glob
     resolution = 512
     device_idx = 0
     
-    hair_dir = "X:/hairstep/DD_Hairs/hair3D"
-    output_dir = "X:/hairstep/DD_Hairs/result"
+    hair_dir = "X:/hairstep/Man_Image/hair3D"
+    output_dir = "X:/hairstep/Man_Image/result"
     model_path = "X:/hairstep/head_model_metahuman.obj"
 
     for filepath in glob.glob(os.path.join(hair_dir, "*.hair")):

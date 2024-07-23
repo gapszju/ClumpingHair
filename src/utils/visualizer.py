@@ -318,6 +318,9 @@ def run(data_path):
     print(f"Visualizing:", out_filename)
     with open(os.path.join(data_path, "config.yml")) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+    config["camera_front_path"] = "../HairStep/data/camera_front.json"
+    config["camera_side_path"] = "../HairStep/data/camera_side.json"
+
     const_data = torch.load(os.path.join(data_path, "constants.pt"), map_location="cpu")
     
     # ref images

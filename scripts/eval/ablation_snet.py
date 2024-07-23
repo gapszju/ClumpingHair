@@ -13,14 +13,12 @@ from pytorch3d.structures import Curves
 from pytorch3d.io import load_hair, save_hair
 
 device = torch.device("cuda")
-cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.join(cur_dir, "../"))
-from modifiers.hair_modifiers import HairModifier
-from utils import *
 
-sys.path.insert(0, os.path.join(cur_dir, "../../contrastive_learning"))
-from simclr import ResNetSimCLR
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(ROOT_DIR)
+from src.model.network import sNet
+from src.utils import *
 
 
 def calc_ref_features(config, model):
@@ -90,7 +88,7 @@ def eval_snet_error(config):
     # model
     ckpt = torch.load(config["ckpt_path"], map_location=device)["state_dict"]
     in_channels = [ckpt["conv1.weight"].shape[1], ckpt["conv2.weight"].shape[1]]
-    model = ResNetSimCLR(base_model="resnet18", out_dim=128, in_channels=in_channels)
+    model = sNet(base_model="resnet18", out_dim=128, in_channels=in_channels)
     model.load_state_dict(ckpt)
     for param in model.parameters():
         param.requires_grad = False

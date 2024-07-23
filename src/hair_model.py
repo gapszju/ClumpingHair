@@ -69,11 +69,13 @@ def calc_optimized_guides(strands: torch.Tensor, n_clusters, num_nn, epoch=5000,
 
             # calc loss
             loss_geo = generalized_mean((strands_interp - strands).norm(dim=-1), p)
-            loss_tangent = F.l1_loss(guide_diff, ref_guide_diff)
+            # loss_tangent = F.l1_loss(guide_diff, ref_guide_diff)
+            loss_tangent = generalized_mean((guide_diff - ref_guide_diff).norm(dim=-1), p)
             loss_reg = torch.mean((1 - weights.sum(dim=-1))**2)
             loss_smooth = hair_smooth_loss(guides_local)
             
-            loss = loss_geo + 0.01*loss_tangent + 0.1*loss_reg + 1*loss_smooth
+            # loss = loss_geo + 0.01*loss_tangent + 0.1*loss_reg + 1*loss_smooth
+            loss = loss_geo + 3*loss_tangent + 1*loss_reg + 1*loss_smooth
             
             loss.backward()
             # print(f"epoch: {i:04d}, loss_geo: {loss_geo.item():.5f}, loss_reg: {loss_reg.item():.5f}, loss_smooth: {loss_smooth.item():.5f}")
@@ -97,7 +99,7 @@ class HairModel:
         head_path: str = None,
         n_guide=512,
         n_sample=32,
-        n_cluster=256,
+        n_cluster=1024,
         device="cpu",
     ):
         self.hair_list = load_hair(hair_path, device=device)
@@ -125,6 +127,7 @@ class HairModel:
             hair_strands, n_guide, num_nn=32, epoch=5000, p=2.7, use_lstsq=False
         )
         self.guides : torch.Tensor = guides
+        self.guides_init : torch.Tensor = guides.clone()
         self.guide_indices : torch.Tensor = indices
         self.guide_weights : torch.Tensor = weights
         self.guide_roots = guides[:, 0, :]
@@ -276,6 +279,16 @@ class HairModel:
             hair_modified = (1 - self.cut_weights) * lower_points + self.cut_weights * upper_points
 
         return hair_modified
+    
+    def save(self, filepath): 
+        torch.save(self.__dict__, filepath)
+    
+    @classmethod
+    def load(cls, filepath):
+        data = torch.load(filepath)
+        obj = cls.__new__(cls)
+        obj.__dict__.update(data)
+        return obj
 
 
 if __name__ == "__main__":

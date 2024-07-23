@@ -3,6 +3,7 @@ import sys
 import torch
 import yaml
 import argparse
+import pickle
 import pyexr
 import time
 import numpy as np
@@ -194,8 +195,12 @@ def optimize_strands(config):
 
     clump_scale = None
     if config["with_modifier"]:
-        best_param, best_param_tensor = search_best_param(
-            config, model, ref_feature, H, W, cameras, mesh_zbuf, curves, hair_model)
+        if config["clump_scale"] is None:
+            best_param, best_param_tensor = search_best_param(
+                config, model, ref_feature, H, W, cameras, mesh_zbuf, curves, hair_model)
+        else:
+            hair_model.eval(config["clump_scale"])
+            best_param_tensor = hair_model.clump_scale.clone()
         # clump_scale = torch.ones(1, device=device) * best_param
         clump_scale = best_param_tensor
         clump_scale.requires_grad = True
@@ -204,6 +209,7 @@ def optimize_strands(config):
     # save vis constants
     output_vis = os.path.join(config["output_dir"], "vis")
     os.makedirs(output_vis, exist_ok=True)
+    print("save vis constants", output_vis)
     with open(os.path.join(output_vis, "config.yml"), "w", encoding="utf-8") as f:
         yaml.dump(config, f)
     torch.save({
@@ -224,7 +230,7 @@ def optimize_strands(config):
 
         # outline loss
         image_silh, image_depth, image_orien = render_feature_map(
-            config["rasterize_medium"], curves, (W, H), mesh_zbuf
+            config["rasterize_medium"], curves, (W, H), mesh_zbuf, hair_model.clump_scale
         )
         strands_root_tangent = F.normalize(hair_strands_mod.diff(dim=1)[:, 0, :], dim=-1)
         guides_laplacian = hair_guides.diff(dim=1).diff(dim=1)
@@ -243,7 +249,7 @@ def optimize_strands(config):
         info_str = f"iter: {i:04d}, silh: {loss_silh.item():.6f}, orien: {loss_orien.item():.6f}, depth: {loss_depth.item():.6f}, smooth: {loss_smooth.item():.6f}"
 
         # save vis results
-        if i % 20 == 0:
+        if i % config["vis_interval"] == 0:
             torch.save({
                 "image_orien": image_orien.detach(),
                 "image_silh": image_silh.detach(),
@@ -305,5 +311,6 @@ def optimize_strands(config):
                       hair_model.eval(clump_scale, add_noise=True, add_cut=False).detach())
     save_hair_strands(os.path.join(result_dir, "full_modifier.hair"),
                       hair_model.eval(clump_scale, add_noise=True, add_cut=True).detach())
+    hair_model.save(os.path.join(result_dir, "hair_model.pkl"))
 
     print(f"finish {hair_name}, time: {time.time() - start_time:.4f}")

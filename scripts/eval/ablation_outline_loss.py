@@ -6,17 +6,15 @@ import argparse
 import matplotlib.pyplot as plt
 from pytorch3d.io import load_hair
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(cur_dir, "../"))
-from optim import run as full_pipline
-
-sys.path.insert(0, os.path.join(cur_dir, "../contrastive_learning"))
-from data_render import visualize_hair, render_final_result, render_projection
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(ROOT_DIR)
+from src.optim import optimize_strands
+from src.utils import render_hair_template, render_hair_projection
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--conf', type=str, default='./config_full.yml')
+    parser.add_argument('--conf', type=str, default='./config/config_sample.yml')
     parser.add_argument('--gpu', type=int, default=0)
 
     args = parser.parse_args()
@@ -27,8 +25,8 @@ if __name__ == "__main__":
     with open(args.conf, "r", encoding="utf-8") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     
-    config["ckpt_path"] = "../contrastive_learning/runs/May05_02-47-38_ROG_cluster_1024_use_full_map/model_best.pth.tar"
-    
+    config["ckpt_path"] = os.path.join(ROOT_DIR, "ckpt","model_best.pth.tar")
+   
     input_dir = "X:/hairstep/Real_Image"
     output_dir = "X:/results/outline_loss_ablation/"
     
@@ -40,11 +38,11 @@ if __name__ == "__main__":
     # hair_name = "patrick-malleret-p-v1DBkTrgo-unsplash" 
     
     for weights, label in zip(
-            [[1, 1, 0.1, 1e4, 10, 1]],
-            ["add_root_constraint"]            
+            [[1, 1, 0.1, 0, 0, 0], [1, 1, 0.1, 1e4, 0, 0], [1, 1, 0.1, 1e4, 10, 0], [1, 1, 0.1, 1e4, 10, 1]],
+            ["only_feature_map", "add_geometry_constraint", "add_smooth_constraint", "add_root_constraint"]            
     ):
         config["ref_img_path"] = os.path.join(input_dir, "resized_img", hair_name+".png")
-        config["head_path"] = "../HairStep/data/head_model_metahuman.obj"
+        config["head_path"] = os.path.join(ROOT_DIR, "assets", "head_model_metahuman.obj")
         config["hair_path"] = os.path.join(input_dir, "hair3D/resample_32", hair_name+".hair")
         config["camera_path"] = os.path.join(input_dir, "param", hair_name+".npy")
         config["ref_seg_path"] = os.path.join(input_dir, "seg", hair_name+".png")
@@ -60,16 +58,6 @@ if __name__ == "__main__":
         
         result_hair_path = os.path.join(config["output_dir"], "results", "full_modifier.hair")
         hair_strands = torch.stack(load_hair(result_hair_path)).numpy()
-        render_final_result(config["hair_path"], hair_strands, os.path.join(config["output_dir"], "render"),
-                            render_origin=False, device_idx=bl_device_idx)
-        # render_projection(
-        #     config["head_path"], config["hair_path"], config["camera_path"],
-        #     os.path.join(config["output_dir"], "projection", "origin.png"), img_size=1024,
-        #     device_idx=bl_device_idx,
-        # )
-        # render_projection(
-        #     config["head_path"], result_hair_path, config["camera_path"],
-        #     os.path.join(config["output_dir"], "projection", "result.png"), img_size=1024,
-        #     device_idx=bl_device_idx,
-        # )
+        render_hair_template(result_hair_path, os.path.join(config["output_dir"], "render", "render_modified"), device_idx=args.gpu)
+        render_hair_template(result_hair_path, os.path.join(config["output_dir"], "render_ani", "render"), animation=True, device_idx=args.gpu)
 

@@ -2,11 +2,9 @@ import os
 import sys
 import shutil
 import pyexr
-import json
-import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 
 def add_background(image, bg_color=(192, 192, 192, 255)):
@@ -120,11 +118,11 @@ def teaser(input_dir, output_dir):
     for subdir in os.listdir(input_dir):
         if not os.path.exists(os.path.join(input_dir, subdir, "render")):
             continue
-        if subdir not in  [
-            "4",
-            "janko-ferlic-GWFffQS5eWU-unsplash",
-        ]:
-            continue
+        # if subdir not in  [
+        #     "4",
+        #     "janko-ferlic-GWFffQS5eWU-unsplash",
+        # ]:
+        #     continue
         print("Processing", subdir)
         
         separator_subv = np.ones((1024, 2, 3), dtype=np.uint8) * 255
@@ -278,7 +276,7 @@ def show_dataset(input_dir, output_path):
     plt.imsave(output_path, final)
 
 
-def compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir, selected_hair, output_path):
+def compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir, selected_hair, output_dir):
     final = []
     for hair_name in selected_hair:
         print("Processing", hair_name)
@@ -293,9 +291,8 @@ def compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir,
         ref_img_with_mask[~ref_mask] //= 2
         
         # hairnet
-        render_dir = os.path.join(hairnet_dir, "render")
-        hairnet_img = read_image(os.path.join(render_dir, hair_name+".png"))
-        hairnet_proj_img = read_image(os.path.join(render_dir, "projection", hair_name+".png"), with_alpha=True)
+        hairnet_img = read_image(os.path.join(hairnet_dir, "render", hair_name+"_front.png"))
+        hairnet_proj_img = read_image(os.path.join(hairnet_dir, "projection", hair_name+".png"), with_alpha=True)
         hairnet_proj_img = Image.alpha_composite(ref_img_dark, hairnet_proj_img).convert("RGB").resize((512, 512))
     
         # neuralHDhair
@@ -326,95 +323,12 @@ def compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir,
                                 separator_v, neuralhdhair_img, np.concatenate([blank, neuralhdhair_proj_img], 0),
                                 separator_v, hairstep_img, np.concatenate([blank, hairstep_proj_img], 0),
                                 separator_v, ours_img, np.concatenate([blank, ours_proj_img], 0)], 1)
-        final += [group, separator_h]
+        
+        plt.imsave(os.path.join(output_dir, hair_name+".png"), group)
     
-    final = np.concatenate(final[:-1], 0)
-
-    plt.imsave(output_path, final)
-
-
-def user_study(hairstep_dir, neuralhdhair_dir, result_dir, selected_hair, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
+    #     final += [group, separator_h]
+    # final = np.concatenate(final[:-1], 0)
     
-    question_mobile_str = ""
-    question_pc_str = ""
-    label_list = []
-    for hair_name in selected_hair:
-        print("Processing", hair_name)
-
-        # reference image
-        ref_img = read_image(os.path.join(hairstep_dir, "resized_img", hair_name+".png")).resize((1024, 1024))
-
-        # neuralHDhair
-        render_dir = os.path.join(neuralhdhair_dir, hair_name, "render")
-        neuralhdhair_front = read_image(os.path.join(render_dir, "render_origin_front.png"))
-        neuralhdhair_side_L = read_image(os.path.join(render_dir, "render_origin_side_L.png")).resize((512, 512))
-        neuralhdhair_side_R = read_image(os.path.join(render_dir, "render_origin_side_R.png")).resize((512, 512))
-        
-        # hairstep and ours
-        render_dir = os.path.join(result_dir, hair_name, "render")
-        hairstep_front = read_image(os.path.join(render_dir, "render_origin_front.png"))
-        hairstep_side_L = read_image(os.path.join(render_dir, "render_origin_side_L.png")).resize((512, 512))
-        hairstep_side_R = read_image(os.path.join(render_dir, "render_origin_side_R.png")).resize((512, 512))
-        
-        ours_front = read_image(os.path.join(render_dir, "render_modified_front.png"))
-        ours_side_L = read_image(os.path.join(render_dir, "render_modified_side_L.png")).resize((512, 512))
-        ours_side_R = read_image(os.path.join(render_dir, "render_modified_side_R.png")).resize((512, 512))
-        
-        # groups
-        names = ["neuralhdhair", "hairstep", "ours"]
-        groups_mobile = [
-            np.concatenate([neuralhdhair_front, np.concatenate([neuralhdhair_side_L, neuralhdhair_side_R], 0)], 1),
-            np.concatenate([hairstep_front, np.concatenate([hairstep_side_L, hairstep_side_R], 0)], 1),
-            np.concatenate([ours_front, np.concatenate([ours_side_L, ours_side_R], 0)], 1),
-        ]
-        groups_pc = [
-            np.concatenate([neuralhdhair_front, np.concatenate([neuralhdhair_side_L, neuralhdhair_side_R], 1)], 0),
-            np.concatenate([hairstep_front, np.concatenate([hairstep_side_L, hairstep_side_R], 1)], 0),
-            np.concatenate([ours_front, np.concatenate([ours_side_L, ours_side_R], 1)], 0),
-        ]
-        idxs = np.random.permutation(3)
-        
-        # mobile
-        separator_h = np.ones((10, 1024+512, 3), dtype=np.uint8) * 255
-        blank = np.ones((1024, 512, 3), dtype=np.uint8) * 255
-        result_mobile = sum([[separator_h, groups_mobile[i]] for i in idxs], [])
-        result_mobile = np.concatenate([np.concatenate([ref_img, blank], 1)] + [separator_h]*5 + result_mobile, 0)
-
-        final_mobile = Image.new("RGB", (result_mobile.shape[1]+120, result_mobile.shape[0]), "white")
-        final_mobile.paste(Image.fromarray(result_mobile), (120, 0))
-        draw = ImageDraw.Draw(final_mobile)
-        font = ImageFont.truetype(os.path.join(os.path.dirname(__file__), "arialbd.ttf"), size=80)
-        for i, name in enumerate(["A", "B", "C"], 1):
-            draw.text((0, 1024*i+512), name, fill="gray", font=font)
-        
-        # pc
-        separator_v = np.ones((1024+512, 10, 3), dtype=np.uint8) * 255
-        blank = np.ones((512, 1024, 3), dtype=np.uint8) * 255
-        result_pc = sum([[separator_v, groups_pc[i]] for i in idxs], [])
-        result_pc = np.concatenate([np.concatenate([ref_img, blank], 0)] + [separator_v]*5 + result_pc, 1)
-        final_pc = Image.fromarray(result_pc)
-        
-        # save
-        final_mobile.save(os.path.join(output_dir, hair_name+".mobile.webp"), lossless=True)
-        final_mobile.save(os.path.join(output_dir, hair_name+"-mobile.webp.webp"), quality=90)
-        final_pc.save(os.path.join(output_dir, hair_name+".pc.webp"), lossless=True)
-        final_pc.save(os.path.join(output_dir, hair_name+"-pc.webp.webp"), quality=90)
-        label_list.append((hair_name, [names[i] for i in idxs]))
-        
-        question_template = "\n请选择与下面图像最相似和最真实的结果。(%s)[矩阵单选题](![%s]\(https://szr.faceunity.com/hair/%s.webp.webp\){auto,auto})\nA B C\n最相似\n最真实\n"
-        question_mobile_str += question_template % (hair_name[:5], hair_name, hair_name+"-mobile")
-        question_pc_str += question_template % (hair_name[:5], hair_name, hair_name+"-pc")
-    
-    subprocess.run(["scp", output_dir+"/*.webp", "tzs@192.168.16.77:~/hair/"], check=True)
-    with open(os.path.join(output_dir, "question.md"), "w") as f:
-        f.write("\n===分页===\n")
-        f.write(question_mobile_str)
-        f.write("\n===分页===\n")
-        f.write(question_pc_str)
-    with open(os.path.join(output_dir, "label.json"), "w") as f:
-        json.dump(label_list, f)
-
 
 if __name__ == "__main__":
     # input_dir = "X:/differential_rendering/full_pipline/Apr20_16-40-31_ROG_with_optim_dist2/Real_Image2_smooth"
@@ -427,23 +341,23 @@ if __name__ == "__main__":
     # dst_dir = "X:/differential_rendering/full_pipline/May05_02-47-38_ROG_cluster_1024_use_full_map/Real_Image"
     # copy_origin_result(src_dir, dst_dir)
 
-    # input_dir = "X:/results/reconstruction/hairstep/Real_Image"
-    # output_dir = "X:/results/teaser"
-    # os.makedirs(output_dir, exist_ok=True)
-    # # teaser(input_dir, output_dir)
+    input_dir = "X:/results/reconstruction/hairstep/Man_Image"
+    output_dir = "X:/results/teaser_man"
+    os.makedirs(output_dir, exist_ok=True)
+    teaser(input_dir, output_dir)
     # Image.open(os.path.join(output_dir, "4.png")).convert("RGB").save(
-    #     "C:/Users/tangz/Desktop/research/code/hair_modeling/doc/single-view-3d-hair-modeling/results/teaser.jpg",
+    #     "../../doc/single-view-3d-hair-modeling/results/teaser.jpg",
     #     quality=100,
     # )
     # Image.open( os.path.join(output_dir, "janko-ferlic-GWFffQS5eWU-unsplash.png")).convert("RGB").save(
-    #     "C:/Users/tangz/Desktop/research/code/hair_modeling/doc/single-view-3d-hair-modeling/results/teaser2.jpg",
+    #     "../../doc/single-view-3d-hair-modeling/results/teaser2.jpg",
     #     quality=100,
     # )
 
-    input_dir = "X:/results/reconstruction/hairstep/Real_Image"
-    output_path = "X:/results/final_results.png"
-    collage_our_result(input_dir, output_path)
-    Image.open(output_path).convert("RGB").save("C:/Users/tangz/Desktop/research/code/hair_modeling/doc/single-view-3d-hair-modeling/results/final_results.jpg", quality=95)
+    # input_dir = "X:/results/reconstruction/hairstep/Real_Image"
+    # output_path = "X:/results/final_results.png"
+    # collage_our_result(input_dir, output_path)
+    # Image.open(output_path).convert("RGB").save("../../doc/single-view-3d-hair-modeling/results/final_results.jpg", quality=95)
 
     # input_dir = "X:/results/clumping_validation"
     # output_path = "X:/results/xgen_data_compare.png"
@@ -452,13 +366,13 @@ if __name__ == "__main__":
     # input_dir = "X:/contrastive_learning/data/clumping_dataset/sample_dataset"
     # output_path = "X:/results/snet_dataset.png"
     # show_dataset(input_dir, output_path)
-    # Image.open(output_path).convert("RGB").save("C:/Users/tangz/Desktop/research/code/hair_modeling/doc/single-view-3d-hair-modeling/body/snet_dataset.jpg", quality=95)
+    # Image.open(output_path).convert("RGB").save("../../doc/single-view-3d-hair-modeling/body/snet_dataset.jpg", quality=95)
 
     # result_dir = "X:/results/reconstruction/hairstep/Real_Image"
     # neuralhdhair_dir = "X:/neuralhdhair/Real_Image"
     # hairnet_dir = "X:/hairnet/Real_Image"
     # hairstep_dir = "X:/hairstep/Real_Image"
-    # output_path = "X:/results/comparisons.png"
+    # output_dir = "X:/results/comparisons"
     # selected_hair = [
     #     "halil-ibrahim-cetinkaya-WzGC8xSyqfg-unsplash",
     #     "midas-hofstra-tidSLv-UaNs-unsplash",
@@ -466,19 +380,4 @@ if __name__ == "__main__":
     #     "hosein-sediqi-sBkSyfPzakI-unsplash",
     #     "kate-townsend-3YwfRKDiC-8-unsplash",
     # ]
-    # compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir, selected_hair, output_path)
-
-    # selected_hair = [
-    #     "ann-agterberg-WqATKbXqGZQ-unsplash",
-    #     "christina-wocintechchat-com-0Zx1bDv5BNY-unsplash",
-    #     "rw-studios-mVF9gF7UIqQ-unsplash",
-    #     "eric-karim-cornelis-b3oyT44E3LE-unsplash",
-    #     "dollar-gill-s5Dk_IHgxw4-unsplash",
-    #     "flemming-fuchs-0toSDPvLjhc-unsplash",
-    #     "janko-ferlic-Q13lggdvtVY-unsplash",
-    #     "luke-southern-yyvx_eYqtKY-unsplash",
-    #     "patrick-malleret-p-v1DBkTrgo-unsplash",
-    #     "andre-sebastian-X6aMAzoVJzk-unsplash",
-    # ]
-    # output_dir = "X:/results/user_study"
-    # user_study(hairstep_dir, neuralhdhair_dir, result_dir, selected_hair, output_dir)
+    # compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir, selected_hair, output_dir)
