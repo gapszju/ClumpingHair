@@ -23,7 +23,7 @@ from torchcubicspline import natural_cubic_spline_coeffs, NaturalCubicSpline
 device = torch.device("cuda")
 
 
-def read_hair_cy(filepath: str, scale: float=1.0, coord_transform: bool=True) -> bpy.types.Object:
+def read_hair_cy(filepath: str, scale: float=1.0, coord_transform: bool=True):
     """Read a cyHair format hair file.
 
     We convert the coords from OpenGL's axis convention to Blender's.

@@ -153,18 +153,64 @@ def render_hair_simulation(
             render_scene(os.path.join(output_dir, "render", "hairstep", f"hairstep_{i:03d}.png"), img_size=1024)
 
 
-if __name__ == "__main__":
-    # hair_name = "lance-reis-0sJ6Hwi9MU0-unsplash"
-    hair_name = "joao-paulo-de-souza-oliveira-x-FNmzxyQ94-unsplash"
+def render_full_hair_simulation(
+    head_cache_path,
+    strands_cache_path,
+    output_dir,
+    camera_path=None,
+    device_idx=0,
+):
+    template_path = os.path.join(asset_dir, "render_template.blend")
+    init_scene(device_idx)
+    bpy.ops.wm.open_mainfile(filepath=template_path)
+
+    # head
+    head_obj = bpy.data.objects["head_smooth"]
+    head_cache = np.load(head_cache_path)
+    head_obj.data.vertices.foreach_set("co", head_cache[0].reshape(-1))
+    head_obj.modifiers.clear()
+    head_obj.rotation_euler = (np.pi/2, 0, 0)
+
+    # import hair
+    strands_cache = np.load(strands_cache_path)
+    strands_cache = strands_cache.reshape(strands_cache.shape[0], -1, 32, 3)
+    hair_obj = create_hair_from_strands("Hair", strands_cache[0])
+    hair_obj.data.materials.append(bpy.data.materials["Hair"])
+    hair_obj.rotation_euler = (np.pi/2, 0, 0)
+
+    # camera
+    algin_camera_to_objects([hair_obj])
+    if camera_path is not None:
+        import_opengl_camera(camera_path)
+
+    for i in range(head_cache.shape[0]):
+        set_hair_strands(hair_obj.name, strands_cache[i])
+        head_obj.data.vertices.foreach_set("co", head_cache[i].reshape(-1))
+        render_scene(os.path.join(output_dir, "render", "hairstep_full", f"hairstep_full_{i:03d}.png"), img_size=1024)
+
+
+def interpolate_hair(hair_model_path, guide_path, output_path, device_idx=0):
+    hair_model = HairModel.load(hair_model_path)
+    hair_model.guides.requires_grad = False
+    hair_model.clump_scale.requires_grad = False
     
-    hair_model_path = f"X:/simulation/{hair_name}/results/hair_model.pkl"
-    output_dir = f"X:/simulation/{hair_name}/simulation"
+    print(hair_model.guides.shape)
+    hair_model.guides = torch.tensor(np.stack(read_hair_cy(guide_path)[0])).to(hair_model.device)
+    print(hair_model.guides.shape)
+    save_hair_strands(output_path, hair_model.eval())
+    
+
+if __name__ == "__main__":   
+    hair_model_path = "output/image/results/hair_model.pkl"
+    output_dir = "output/image/simulation"
     head_cache_path = os.path.join(output_dir, "head_cache.npy")
     hairstep_guide_cache_path = os.path.join(output_dir, "hairstep_guide_cache.npy")
+    hairstep_strands_cache_path = os.path.join(output_dir, "hairstep_strands_cache.npy")
     ours_guide_cache_path = os.path.join(output_dir, "ours_guide_cache.npy")
     camera_path = os.path.join(output_dir, "camera.json")
 
     os.makedirs(output_dir, exist_ok=True)
-    extract_hairs(hair_model_path, output_dir)
-    # render_hair_simulation(head_cache_path, hair_model_path, ours_guide_cache_path, output_dir, camera_path, use_clumping=True)
+    # extract_hairs(hair_model_path, output_dir)
+    render_hair_simulation(head_cache_path, hair_model_path, ours_guide_cache_path, output_dir, camera_path, use_clumping=True)
     # render_hair_simulation(head_cache_path, hair_model_path, hairstep_guide_cache_path, output_dir, camera_path, use_clumping=False)
+    # render_full_hair_simulation(head_cache_path, hairstep_strands_cache_path, output_dir, camera_path)

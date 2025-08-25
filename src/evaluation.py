@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 from pytorch3d.io import load_hair
 from .utils import *
 
@@ -126,26 +127,28 @@ def compare_image_metric(config, init_strands: torch.Tensor, result_strands: tor
 
     hida_pairs = torch.tensor(np.load(config["hida_pair_path"])).to(device)
     hida_labels = torch.tensor(np.load(config["hida_label_path"])).to(device)
-    
+
     # setup renderer
     cameras = load_cameras(config["camera_path"], device=device)
     head_mesh = load_obj_with_uv(config["head_path"], device=device)
     head_verts_ndc = transform_points_to_ndc(cameras, head_mesh.verts_packed())
     init_strands_ndc = transform_points_to_ndc(cameras, init_strands)
     result_strands_ndc = transform_points_to_ndc(cameras, result_strands)
-    gl_render = GlHairRenderer(
-        init_strands_ndc, head_verts_ndc, head_mesh.faces_packed(), image_size=(W, H))
 
     # init evaluation
-    init_image_orien, init_image_silh, init_image_depth = gl_render.render()
+    init_image_orien, init_image_silh, init_image_depth = GlHairRenderer(
+        init_strands_ndc, head_verts_ndc, head_mesh.faces_packed(), image_size=(W, H)
+    ).render()
     init_hisa = compute_hisa(ref_img_orien, init_image_orien)
     init_hida = compute_hida(init_image_depth, hida_pairs, hida_labels)
-    
+
     # result evaluation
-    result_image_orien, result_image_silh, result_image_depth = gl_render.render(result_strands_ndc)
+    result_image_orien, result_image_silh, result_image_depth = GlHairRenderer(
+        result_strands_ndc, head_verts_ndc, head_mesh.faces_packed(), image_size=(W, H)
+    ).render()
     result_hisa = compute_hisa(ref_img_orien, result_image_orien)
     result_hida = compute_hida(result_image_depth, hida_pairs, hida_labels)
-    
+
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     fig.tight_layout()
     for ax in axes.flatten():
@@ -156,11 +159,11 @@ def compare_image_metric(config, init_strands: torch.Tensor, result_strands: tor
     axes[1, 1].imshow(init_image_depth.cpu().numpy()), axes[1, 1].set_title("Hairstep Depth"), axes[1, 1].set_xlabel(f"HiDa: {init_hida*100:.2f}%")
     axes[0, 2].imshow(result_image_orien.cpu().numpy()), axes[0, 2].set_title("Ours Orientation"), axes[0, 2].set_xlabel(f"HiSa: {result_hisa:.2f}")
     axes[1, 2].imshow(result_image_depth.cpu().numpy()), axes[1, 2].set_title("Ours Depth"), axes[1, 2].set_xlabel(f"HiDa: {result_hida*100:.2f}%")
-    
+
     hair_name = os.path.basename(config["ref_img_path"]).split(".")[0]
     fig.savefig(os.path.join(config["output_dir"], hair_name+".png"))
     plt.close(fig)
-    
+
     return init_hisa, init_hida, result_hisa, result_hida
 
 

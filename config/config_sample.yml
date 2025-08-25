@@ -1,17 +1,17 @@
 # input paths
-head_path: "X:/hairstep/head_model_metahuman.obj"
-camera_path: X:/hairstep/HiSa_HiDa\param\00e7ef0e1bac0975258d593820b2c4d7.npy
-hair_path: X:/hairstep/HiSa_HiDa\hair3D/resample_32\00e7ef0e1bac0975258d593820b2c4d7.hair
-ref_img_path: X:/hairstep/HiSa_HiDa\resized_img\00e7ef0e1bac0975258d593820b2c4d7.png
-ref_seg_path: X:/hairstep/HiSa_HiDa\seg\00e7ef0e1bac0975258d593820b2c4d7.png
-ref_orien_path: X:/hairstep/HiSa_HiDa\strand_map\00e7ef0e1bac0975258d593820b2c4d7.png
-ref_depth_path: X:/hairstep/HiSa_HiDa\depth_map\00e7ef0e1bac0975258d593820b2c4d7.npy
-hida_label_path: X:/hairstep/HiSa_HiDa\relative_depth/labels\00e7ef0e1bac0975258d593820b2c4d7.npy
-hida_pair_path: X:/hairstep/HiSa_HiDa\relative_depth/pairs\00e7ef0e1bac0975258d593820b2c4d7.npy
+head_path: "Z:/TZS/output/single-view-hair/hairstep/head_model_metahuman.obj"
+camera_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/param/00e7ef0e1bac0975258d593820b2c4d7.npy
+hair_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/hair3D/resample_32/00e7ef0e1bac0975258d593820b2c4d7.hair
+ref_img_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/resized_img/00e7ef0e1bac0975258d593820b2c4d7.png
+ref_seg_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/seg/00e7ef0e1bac0975258d593820b2c4d7.png
+ref_orien_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/strand_map/00e7ef0e1bac0975258d593820b2c4d7.png
+ref_depth_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/depth_map/00e7ef0e1bac0975258d593820b2c4d7.npy
+hida_label_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/relative_depth/labels/00e7ef0e1bac0975258d593820b2c4d7.npy
+hida_pair_path: Z:/TZS/output/single-view-hair/hairstep/HiSa_HiDa/relative_depth/pairs/00e7ef0e1bac0975258d593820b2c4d7.npy
 ckpt_path: "../contrastive_learning/runs/Mar18_11-27-14_ROG_single_parameter/model_best.pth.tar"
 
 # output path
-output_dir: "X:/differential_rendering/geometry/test"
+output_dir: "./output"
 
 # curve parameters
 n_sample: 32

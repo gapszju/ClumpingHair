@@ -185,8 +185,8 @@ def render_neuralhdhair(args):
 
 
 def render_hairnet(args):
-    input_dir = "X:/hairnet/Real_Image"
-    hairstep_dir = "X:/hairstep/Real_Image"
+    input_dir = "Z:/TZS/output/single-view-hair/hairnet/Real_Image"
+    hairstep_dir = "Z:/TZS/output/single-view-hair/hairstep/Real_Image"
     hair_dir = os.path.join(input_dir, "hair3D/resample_32")
     hair_list = [name[:-len(".hair")] for name in os.listdir(hair_dir) if name.endswith(".hair")]
     hair_list = [
@@ -195,7 +195,9 @@ def render_hairnet(args):
         # "behrouz-sasani-5cDg40slYoc-unsplash",
         # "hosein-sediqi-sBkSyfPzakI-unsplash",
         # "kate-townsend-3YwfRKDiC-8-unsplash",
-        "janko-ferlic-GWFffQS5eWU-unsplash",
+        # "janko-ferlic-GWFffQS5eWU-unsplash",
+        "patrick-malleret-p-v1DBkTrgo-unsplash",
+        "frank-uyt-den-bogaard-NhLQgL8NQ2A-unsplash",
     ]
     
     for hair_name in hair_list:
@@ -203,15 +205,15 @@ def render_hairnet(args):
         hair_path = os.path.join(hair_dir, hair_name+".hair")
         camera_path = os.path.join(hairstep_dir, "param", hair_name+".npy")
 
-        # render_hair_template(hair_path, os.path.join(input_dir, "render", hair_name),
-        #                      side_view=False, device_idx=args.gpu)
-        # render_hair_projection(
-        #     head_path, hair_path, camera_path,
-        #     os.path.join(input_dir, "projection", hair_name), img_size=1024,
-        #     device_idx=args.gpu,
-        # )
-        render_hair_template(hair_path, os.path.join(input_dir, "animation", hair_name, "render.png"),
-                            animation=True, device_idx=args.gpu)
+        render_hair_template(hair_path, os.path.join(input_dir, "render", hair_name),
+                             side_view=False, device_idx=args.gpu)
+        render_hair_projection(
+            head_path, hair_path, camera_path,
+            os.path.join(input_dir, "projection", hair_name), img_size=1024,
+            device_idx=args.gpu,
+        )
+        # render_hair_template(hair_path, os.path.join(input_dir, "animation", hair_name, "render.png"),
+        #                     animation=True, device_idx=args.gpu)
 
 
 if __name__ == "__main__":
@@ -223,9 +225,9 @@ if __name__ == "__main__":
     torch.cuda.set_device(args.gpu)
 
     # render_hairstep(args)
-    # # render_neuralhdhair(args)
-    # # render_hairnet(args)
-    # exit()
+    # render_neuralhdhair(args)
+    render_hairnet(args)
+    exit()
     
     head_path = "X:/hairstep/head_model_metahuman.obj"
     hair_path = "X:/hairstep/my_data/hair3D/resample_32/IMG_9934.hair"

@@ -24,7 +24,7 @@ device = torch.device("cuda")
 
 
 def get_model(config):
-    ckpt = torch.load(config["ckpt_path"], map_location=device)["state_dict"]
+    ckpt = torch.load(config["ckpt_path"], map_location=device, weights_only=False)["state_dict"]
     in_channels = [ckpt["conv1.weight"].shape[1], ckpt["conv2.weight"].shape[1]]
     model = sNet(base_model="resnet18", out_dim=128, in_channels=in_channels)
     
@@ -218,7 +218,9 @@ def optimize_strands(config):
         "strands_interp": hair_model.eval().detach(),
         "strand_colors": hair_model.strand_colors,
     }, os.path.join(output_vis, "constants.pt"))
-
+    
+    torch.cuda.empty_cache()
+    
     # main loop
     loss_outline_list = []
     loss_modifier_list = []

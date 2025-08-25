@@ -82,7 +82,7 @@ def valid_clumping_param(config):
 
     scale = best_param_tensor
     scale.requires_grad = True
-    optimizer = torch.optim.Adam([scale], lr=config["lr"])
+    optimizer = torch.optim.Adam([scale], lr=config["lr_clump"])
 
     # optimize
     loss_list = []
@@ -110,16 +110,17 @@ def valid_clumping_param(config):
         # info
         loss_list.append(loss.item())
         param_list.append(scale.mean().item())
-        print(f"epoch: {i}/{config['epoch']}, loss: {loss_list[i]}, scale: {param_list[i]}")
+        print(f"epoch: {i:03d}/{config['epoch']}, loss: {loss_list[i]}, scale: {param_list[i]}")
 
     # visualize
     save_hair_strands(os.path.join(config["output_dir"], "optim_result.hair"), hair_strands_mod)
-
+    torch.save(modifier.clump_scale.detach(),
+               os.path.join(config["output_dir"], "optim_clump_scale.pt"))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--conf', type=str, default='./scripts/base_config.yml')
+    parser.add_argument('--conf', type=str, default='./config/config_sample.yml')
     parser.add_argument('--gpu', type=int, default=0)
     args = parser.parse_args()
 

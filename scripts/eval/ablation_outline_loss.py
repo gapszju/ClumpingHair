@@ -27,15 +27,16 @@ if __name__ == "__main__":
     
     config["ckpt_path"] = os.path.join(ROOT_DIR, "ckpt","model_best.pth.tar")
    
-    input_dir = "X:/hairstep/Real_Image"
-    output_dir = "X:/results/outline_loss_ablation/"
+    input_dir = "Z:/TZS/output/single-view-hair/hairstep/Real_Image"
+    output_dir = "Z:/TZS/output/single-view-hair/results/outline_loss_ablation/"
     
     # hair_name = "joao-paulo-de-souza-oliveira-x-FNmzxyQ94-unsplash"
     # hair_name = "rosa-rafael-vFy6fja-B5M-unsplash"
     # hair_name = "lance-reis-0sJ6Hwi9MU0-unsplash"
-    hair_name = "christina-wocintechchat-com-0Zx1bDv5BNY-unsplash"
+    # hair_name = "christina-wocintechchat-com-0Zx1bDv5BNY-unsplash"
     # hair_name = "max-felner-6u0xv4j6WKI-unsplash"
     # hair_name = "patrick-malleret-p-v1DBkTrgo-unsplash" 
+    hair_name = "subhkaran-singh-dnRkPNatbIY-unsplash" 
     
     for weights, label in zip(
             [[1, 1, 0.1, 0, 0, 0], [1, 1, 0.1, 1e4, 0, 0], [1, 1, 0.1, 1e4, 10, 0], [1, 1, 0.1, 1e4, 10, 1]],
@@ -52,7 +53,7 @@ if __name__ == "__main__":
         config["loss_outline_weights"] = weights
         config["output_dir"] = os.path.join(output_dir, hair_name, label)
         
-        # full_pipline(config)
+        optimize_strands(config)
             
         # hair_visualizer.run(os.path.join(config["output_dir"], "vis"))
         

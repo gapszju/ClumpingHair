@@ -1,0 +1,60 @@
+[workspace]
+authors = ["tangzhongsi <tangzhongsi@qq.com>"]
+channels = ["pytorch", "nvidia", "conda-forge"]
+name = "hair_reconstraction"
+platforms = ["win-64"]
+version = "0.1.0"
+
+[system-requirements]
+cuda = "11"
+
+[tasks]
+build-sim3dr = {cmd = "python setup.py build_ext --inplace", cwd = "ext/HairStep/external/3DDFA_V2/Sim3DR"}
+build-faceboxes = {cmd = "python build.py build_ext --inplace", cwd = "ext/HairStep/external/3DDFA_V2/FaceBoxes/utils"}
+download-checkpoints = "aria2c -x 16 -s 16 -c -d ext/HairStep/checkpoints/SAM-models https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+install-pycuda = "pip install ext/pycuda --use-pep517 --no-build-isolation"
+install-pytorch3d = "pip install ext/pytorch3d --use-pep517 --no-build-isolation"
+install-hairstep = {depends-on = ["build-sim3dr", "build-faceboxes", "download-checkpoints"]}
+postinstall = { depends-on = ["install-pycuda", "install-pytorch3d", "install-hairstep"] }
+
+[dependencies]
+python = "3.10.*"
+pip = ">=25.2,<26"
+cmake = ">=3.26,<4"
+ninja = ">=1.13.1,<2"
+cuda-version = "11.8.*"
+cuda-nvcc = "11.8.*"
+cuda-libraries-dev = "11.8.*"
+pytorch = "==2.2.2"
+torchvision = "==0.17.2"
+pytorch-cuda = "==11.8"
+tqdm = ">=4.67.1,<5"
+pyyaml = ">=6.0.2,<7"
+tensorboard = ">=2.20.0,<3"
+moderngl = ">=5.11.1,<6"
+opencv = ">=4.5.3,<5"
+matplotlib = ">=3.9.1,<4"
+imageio = ">=2.37.0,<3"
+scikit-image = ">=0.25.0,<0.26"
+numba = ">=0.61.2,<0.62"
+opensimplex = ">=0.4.5.1,<0.5"
+fast-pytorch-kmeans = ">=0.2.2,<0.3"
+
+[pypi-options]
+no-build-isolation = ["pytorch3d"]
+
+[pypi-dependencies]
+bpy = { version = "==3.6.0", index = "https://download.blender.org/pypi/" }
+segment-anything = ">=1.0, <2"
+aria2 = "*"
+pyexr = { git = "https://github.com/tvogels/pyexr.git" }
+torchcubicspline = { git = "https://github.com/patrick-kidger/torchcubicspline.git" }
+
+[activation.env]
+KMP_DUPLICATE_LIB_OK = "TRUE"
+
+[target.win.activation]
+env = { CUDA_HOME = "%CONDA_PREFIX%", CUDA_PATH = "%CONDA_PREFIX%" }
+
+[target.win.dependencies]
+vs2019_win-64 = ">=19.29.30139,<20"

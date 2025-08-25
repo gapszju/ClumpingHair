@@ -29,7 +29,7 @@ def compose_image(render_img_path, data_img_path):
     
     # resize
     if image.height != depth.shape[0]:
-        image = image.resize((depth.shape[1], depth.shape[0]), resample=PIL.Image.LANCZOS)
+        image = image.resize((depth.shape[1], depth.shape[0]), resample=Image.LANCZOS)
     image = np.array(image)[..., :3] / 255
     
     data = {'default': image, 'orientation': tangent, 'depth': depth_norm, "aov": aov}

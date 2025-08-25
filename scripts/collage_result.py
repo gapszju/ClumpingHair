@@ -330,6 +330,46 @@ def compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir,
     # final = np.concatenate(final[:-1], 0)
     
 
+def more_comparison(hairstep_dir, neuralhdhair_dir, result_dir, selected_hair, output_path):
+    final = []
+    for hair_name in selected_hair:
+        print("Processing", hair_name)
+
+        # reference image
+        ref_img = read_image(os.path.join(hairstep_dir, "resized_img", hair_name+".png"))
+        ref_img = ref_img.convert("RGB").resize((1024, 1024))
+        
+        # neuralHDhair
+        render_dir = os.path.join(neuralhdhair_dir, hair_name, "render")
+        neuralhdhair_front = read_image(os.path.join(render_dir, "render_origin_front.png"))
+        neuralhdhair_side_l = read_image(os.path.join(render_dir, "render_origin_side_L.png")).resize((512, 512))
+        neuralhdhair_side_r = read_image(os.path.join(render_dir, "render_origin_side_R.png")).resize((512, 512))
+        
+        # hairstep and ours
+        render_dir = os.path.join(result_dir, hair_name, "render")
+        hairstep_front = read_image(os.path.join(render_dir, "render_origin_front.png"))
+        hairstep_side_l = read_image(os.path.join(render_dir, "render_origin_side_L.png")).resize((512, 512))
+        hairstep_side_r = read_image(os.path.join(render_dir, "render_origin_side_R.png")).resize((512, 512))
+                                     
+        ours_front = read_image(os.path.join(render_dir, "render_modified_front.png"))
+        ours_side_l = read_image(os.path.join(render_dir, "render_modified_side_L.png")).resize((512, 512))
+        ours_side_r = read_image(os.path.join(render_dir, "render_modified_side_R.png")).resize((512, 512))
+
+        # separator
+        separator_v = np.ones((1024, 10, 3), dtype=np.uint8) * 255
+        separator_h = np.ones((10, 1024+(1024+512+10)*3, 3), dtype=np.uint8) * 255
+        
+        # combine
+        group = np.concatenate([ref_img,
+                                separator_v, neuralhdhair_front, np.concatenate([neuralhdhair_side_l, neuralhdhair_side_r], 0),
+                                separator_v, hairstep_front, np.concatenate([hairstep_side_l, hairstep_side_r], 0),
+                                separator_v, ours_front, np.concatenate([ours_side_l, ours_side_r], 0)], 1)
+        
+        final += [group, separator_h]
+    final = np.concatenate(final[:-1], 0)
+    plt.imsave(output_path, final)
+    
+
 if __name__ == "__main__":
     # input_dir = "X:/differential_rendering/full_pipline/Apr20_16-40-31_ROG_with_optim_dist2/Real_Image2_smooth"
     # input2_dir = "X:/differential_rendering/full_pipline/Apr20_16-40-31_ROG_with_optim_dist2/Real_Image2_smooth2"
@@ -341,10 +381,10 @@ if __name__ == "__main__":
     # dst_dir = "X:/differential_rendering/full_pipline/May05_02-47-38_ROG_cluster_1024_use_full_map/Real_Image"
     # copy_origin_result(src_dir, dst_dir)
 
-    input_dir = "X:/results/reconstruction/hairstep/Man_Image"
-    output_dir = "X:/results/teaser_man"
-    os.makedirs(output_dir, exist_ok=True)
-    teaser(input_dir, output_dir)
+    # input_dir = "X:/results/reconstruction/hairstep/Man_Image"
+    # output_dir = "X:/results/teaser_man"
+    # os.makedirs(output_dir, exist_ok=True)
+    # teaser(input_dir, output_dir)
     # Image.open(os.path.join(output_dir, "4.png")).convert("RGB").save(
     #     "../../doc/single-view-3d-hair-modeling/results/teaser.jpg",
     #     quality=100,
@@ -368,16 +408,35 @@ if __name__ == "__main__":
     # show_dataset(input_dir, output_path)
     # Image.open(output_path).convert("RGB").save("../../doc/single-view-3d-hair-modeling/body/snet_dataset.jpg", quality=95)
 
-    # result_dir = "X:/results/reconstruction/hairstep/Real_Image"
-    # neuralhdhair_dir = "X:/neuralhdhair/Real_Image"
-    # hairnet_dir = "X:/hairnet/Real_Image"
-    # hairstep_dir = "X:/hairstep/Real_Image"
-    # output_dir = "X:/results/comparisons"
+    result_dir = "Z:/TZS/output/single-view-hair/results/reconstruction/hairstep/Real_Image"
+    neuralhdhair_dir = "Z:/TZS/output/single-view-hair/neuralhdhair/Real_Image"
+    hairnet_dir = "Z:/TZS/output/single-view-hair/hairnet/Real_Image"
+    hairstep_dir = "Z:/TZS/output/single-view-hair/hairstep/Real_Image"
+    output_dir = "Z:/TZS/output/single-view-hair/results/comparisons"
+    selected_hair = [
+        # "halil-ibrahim-cetinkaya-WzGC8xSyqfg-unsplash",
+        # "midas-hofstra-tidSLv-UaNs-unsplash",
+        # "behrouz-sasani-5cDg40slYoc-unsplash",
+        # "hosein-sediqi-sBkSyfPzakI-unsplash",
+        # "kate-townsend-3YwfRKDiC-8-unsplash",
+        "patrick-malleret-p-v1DBkTrgo-unsplash",
+        "frank-uyt-den-bogaard-NhLQgL8NQ2A-unsplash",
+    ]
+    compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir, selected_hair, output_dir)
+    
+    # result_dir = "Z:/TZS/output/single-view-hair/results/reconstruction/hairstep/Real_Image"
+    # neuralhdhair_dir = "Z:/TZS/output/single-view-hair/neuralhdhair/Real_Image"
+    # hairstep_dir = "Z:/TZS/output/single-view-hair/hairstep/Real_Image"
+    # output_path = "Z:/TZS/output/single-view-hair/results/more_comparisons.jpg"
     # selected_hair = [
-    #     "halil-ibrahim-cetinkaya-WzGC8xSyqfg-unsplash",
-    #     "midas-hofstra-tidSLv-UaNs-unsplash",
-    #     "behrouz-sasani-5cDg40slYoc-unsplash",
-    #     "hosein-sediqi-sBkSyfPzakI-unsplash",
-    #     "kate-townsend-3YwfRKDiC-8-unsplash",
+    #     "ann-agterberg-WqATKbXqGZQ-unsplash",
+    #     "christina-wocintechchat-com-0Zx1bDv5BNY-unsplash",
+    #     "rw-studios-mVF9gF7UIqQ-unsplash",
+    #     "dollar-gill-s5Dk_IHgxw4-unsplash",
+    #     "flemming-fuchs-0toSDPvLjhc-unsplash",
+    #     "luke-southern-yyvx_eYqtKY-unsplash",
+    #     "patrick-malleret-p-v1DBkTrgo-unsplash",
+    #     "frank-uyt-den-bogaard-NhLQgL8NQ2A-unsplash",
+    #     "raamin-ka-ucfVRXL2PrY-unsplash",
     # ]
-    # compare_with_others(hairstep_dir, neuralhdhair_dir, hairnet_dir, result_dir, selected_hair, output_dir)
+    # more_comparison(hairstep_dir, neuralhdhair_dir, result_dir, selected_hair, output_path)

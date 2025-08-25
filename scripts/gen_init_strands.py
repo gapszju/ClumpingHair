@@ -4,12 +4,12 @@ import multiprocessing
 
 root_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(root_dir)
-from HairStep.lib.options import BaseOptions
+from ext.HairStep.lib.options import BaseOptions
 
 
 # change to the HairStep directory and run the function
 def run(module_name, func_name, opt):
-    hairstep_dir = os.path.join(root_dir, "HairStep")
+    hairstep_dir = os.path.join(root_dir, "ext", "HairStep")
     os.chdir(hairstep_dir)
     sys.path.insert(0, hairstep_dir)
     

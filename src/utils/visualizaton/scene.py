@@ -41,8 +41,8 @@ def get_objects_bound_box(objects: list[bpy.types.Object]):
         boxes.append(box)
     
     boxes = np.concatenate(boxes, axis=0)
-    bound_min = box.min(axis=0)
-    bound_max = box.max(axis=0)
+    bound_min = boxes.min(axis=0)
+    bound_max = boxes.max(axis=0)
     center = (bound_min + bound_max) / 2
     size = bound_max - bound_min
     
@@ -136,7 +136,7 @@ def create_hair_from_strands(name, strands, widths=None) -> bpy.types.Object:
 
 def import_hair_obj(
     filepath: str,
-    resample: bool = True,
+    resample: bool = False,
     resample_count: int = 32,
     coord_transform: bool = True,
 ) -> bpy.types.Object:
@@ -306,7 +306,8 @@ def set_hair_aov(hair_name: str, aov: np.ndarray):
         attr = hair_obj.data.attributes.new("hair_aov", type="FLOAT_VECTOR", domain="POINT")
     
     aov = aov.reshape(-1, 3)
-    assert len(aov) == len(hair_obj.data.points), "AOV length is not consistent."
+    assert len(aov) == len(hair_obj.data.points), \
+        f"AOV length is not consistent. {len(aov)} != {len(hair_obj.data.points)}"
     attr.data.foreach_set("vector", aov.reshape(-1))
 
 
@@ -384,6 +385,8 @@ def build_scene(obj_file: str, hair_path: str, hair_material: bpy.types.Material
     
     # camera
     algin_camera_to_objects([hair_obj])
+    
+    return head_obj, hair_obj
 
 
 def render_dataset(out_path, img_size=512, with_shading=True, with_data=True):
@@ -501,7 +504,8 @@ def render_hair_color(
     torch.cuda.empty_cache()
 
     init_scene(device_idx)
-    build_scene(model_path, hair_path, get_hair_aov_material())
+    head_obj, hair_obj = build_scene(model_path, hair_path, get_hair_aov_material())
+    head_obj.is_holdout = True
     
     if camera_path is None:
         camera_path = hair_path.replace(".hair", "_camera.json")
@@ -512,15 +516,12 @@ def render_hair_color(
     else:
         import_opengl_camera(camera_path)
     
-    hair_name = os.path.splitext(os.path.basename(hair_path))[0]
-    hair_obj = bpy.data.objects[hair_name]
-    
     # set color
     if isinstance(color, torch.Tensor):
         color = color.detach().cpu().numpy()
     if color.shape[-1] == 4:
         color = color[..., :3]
-    set_hair_aov(hair_name, color)
+    set_hair_aov(hair_obj.name, color)
 
     filename, ext = os.path.splitext(os.path.realpath(out_path))
     render_scene(filename+"_front"+ext, img_size, render_engine)

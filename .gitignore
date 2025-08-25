@@ -4,3 +4,7 @@ __pycache__
 /output
 /runs
 /data
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml

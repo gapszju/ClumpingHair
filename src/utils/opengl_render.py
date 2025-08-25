@@ -231,9 +231,9 @@ if __name__ == "__main__":
     device = torch.device("cuda")
     
     hair_name = "DD_0528_02_changfa_hair002"
-    head_path = os.path.join("X:/contrastive_learning/data/assets/scalp_models",
+    head_path = os.path.join("Z:/TZS/output/single-view-hair/data/assets/scalp_models",
                                         hair_name[:10]+".obj")
-    hair_path = glob.glob(os.path.join("X:/contrastive_learning/data/assets", "*/*",
+    hair_path = glob.glob(os.path.join("Z:/TZS/output/single-view-hair/data/assets", "*/*",
                                         hair_name+"_Wo_Modifiers_resample_32.hair"))[0]
     camera_path = os.path.join(os.path.dirname(hair_path), "camera.json")
 

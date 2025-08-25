@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(ROOT_DIR)
-from src.optim import optimize_strands
-from src.utils import render_hair_template, render_hair_projection
+from src.optim import optimize_strands, HairModel
+from src.utils import render_hair_template, render_hair_projection, render_hair_color
 
 
 if __name__ == "__main__":
@@ -34,12 +34,13 @@ if __name__ == "__main__":
     with open(args.conf, "r", encoding="utf-8") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     config["ckpt_path"] = os.path.join(ROOT_DIR, "ckpt", "model_best.pth.tar")
+    # config["lr_guide"] = 0
     # config["with_modifier"] = False
-    config["loss_outline_weights"] = [1, 1, 0.1, 10000, 50, 1]
+    # config["loss_outline_weights"] = [1, 1, 0.1, 10000, 50, 1]
     # config["clump_scale"] = 0.55
-    # config["epoch"] = 100
+    # config["epoch"] = 10
     # config["vis_interval"] = 1
-       
+    
     
     # input_dir = "X:/hairstep/USC_HairSalon"
     # output_dir = "X:/differential_rendering/full_pipline/May05_02-47-38_ROG_cluster_1024_use_full_map/USC_HairSalon"
@@ -55,21 +56,24 @@ if __name__ == "__main__":
     
     # input_dir = "X:/hairstep/Man_Image"
     # output_dir = "X:/results/reconstruction/hairstep/Man_Image"
-    # with open(os.path.join(input_dir, "selected.json"), "r") as f:
-    #     selected = json.load(f)
+    # # with open(os.path.join(input_dir, "selected.json"), "r") as f:
+    # #     selected = json.load(f)
     # selected = [
     #     # "pexels-tr-n-thanh-hung-1721990-18864058"
     #     # "pexels-kenzero14-19473192",
-    #     "pexels-rukiye-agacayak-686493765-20271519",
+    #     "pexels-pro5-vn-1368185933-26524772",
     # ]
     
-    input_dir = "X:/hairstep/Real_Image"
-    output_dir = "X:/simulation/"
-    selected = [
-        "lance-reis-0sJ6Hwi9MU0-unsplash",
-        # "kenzie-kraft-L3UrNhwBCes-unsplash",
-        # "joao-paulo-de-souza-oliveira-x-FNmzxyQ94-unsplash",
-        ]
+    # input_dir = "Z:/TZS/output/single-view-hair/hairstep/Real_Image"
+    # output_dir = "Z:/TZS/output/single-view-hair/results/reconstruction/hairstep/Real_Image_rebuild"
+    # with open(os.path.join(input_dir, "selected.json"), "r") as f:
+    #     selected = json.load(f)
+    
+    # input_dir = "Z:/TZS/output/single-view-hair/hairstep/Real_Image"
+    # output_dir = "Z:/TZS/output/single-view-hair/results/guide_clumping_ablation/wo_modifier"
+    # selected = [
+    #     "halil-ibrahim-cetinkaya-WzGC8xSyqfg-unsplash",
+    # ]
 
     for hair_name in selected:
         hair_name = os.path.splitext(hair_name)[0]
@@ -87,15 +91,20 @@ if __name__ == "__main__":
         
         if os.path.exists(config["ref_img_path"]):
             result_hair_path = os.path.join(config["output_dir"], "results", "full_modifier.hair")
-            # if os.path.exists(result_hair_path):
-            #     print("skip", hair_name)
-            #     continue
+            if os.path.exists(result_hair_path):
+                print("skip", hair_name)
+                continue
             
             optimize_strands(config)
             torch.cuda.empty_cache()
             
             # hair_visualizer.run(os.path.join(config["output_dir"], "vis"))
             
+            hair_model = HairModel.load(os.path.join(config["output_dir"], "results", "hair_model.pkl"))
+            clump_vis_color = plt.cm.viridis(hair_model.clump_scale.detach().squeeze(-1).repeat(1, hair_model.n_sample).cpu().numpy())
+            render_hair_color(config["head_path"], result_hair_path, clump_vis_color**2.2,
+                os.path.join(config["output_dir"], "clump_vis.png"), img_size=1024, device_idx=args.gpu
+            )
             render_hair_template(config["hair_path"], os.path.join(config["output_dir"], "render", "render_origin.png"), device_idx=args.gpu)
             render_hair_template(result_hair_path, os.path.join(config["output_dir"], "render", "render_modified.png"), device_idx=args.gpu)
             render_hair_projection(
