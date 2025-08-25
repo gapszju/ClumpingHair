@@ -17,6 +17,9 @@ install-pytorch3d = "pip install ext/pytorch3d --use-pep517 --no-build-isolation
 install-hairstep = {depends-on = ["build-sim3dr", "build-faceboxes", "download-checkpoints"]}
 postinstall = { depends-on = ["install-pycuda", "install-pytorch3d", "install-hairstep"] }
 
+gen_init_strands = "python scripts/gen_init_strands.py"
+optimization = "python scripts/optimization.py"
+
 [dependencies]
 python = "3.10.*"
 pip = ">=25.2,<26"
